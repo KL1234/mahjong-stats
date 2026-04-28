@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>麻將統計</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="app-header">
+    <h1>🀄 麻將統計</h1>
+    <div id="auth-area"></div>
+  </header>
+
+  <main>
+    <section class="toolbar">
+      <h2>雀士列表</h2>
+      <div class="toolbar-actions">
+        <a href="stats.html" class="btn-secondary auth-only" hidden>⚙ 管理統計項目</a>
+        <button id="add-player-btn" class="btn-primary auth-only" hidden>+ 新增雀士</button>
+      </div>
+    </section>
+
+    <div id="player-list" class="player-grid">
+      <p class="loading">載入中...</p>
+    </div>
+  </main>
+
+  <div id="login-modal" class="modal" hidden>
+    <div class="modal-content">
+      <h3>登入</h3>
+      <form id="login-form">
+        <label>
+          帳號
+          <input type="text" id="login-id" required placeholder="例：admin" autocomplete="username">
+        </label>
+        <label>
+          密碼
+          <input type="password" id="login-password" required autocomplete="current-password">
+        </label>
+        <p id="login-error" class="error"></p>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" data-close-modal>取消</button>
+          <button type="submit" class="btn-primary">登入</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="add-player-modal" class="modal" hidden>
+    <div class="modal-content">
+      <h3>新增雀士</h3>
+      <form id="add-player-form">
+        <label>
+          雀士名稱
+          <input type="text" id="new-player-name" required maxlength="30">
+        </label>
+        <p id="add-player-error" class="error"></p>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" data-close-modal>取消</button>
+          <button type="submit" class="btn-primary">新增</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script type="module" src="js/index.js"></script>
+</body>
+</html>
