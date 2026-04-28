@@ -126,6 +126,7 @@ async function swap(id, direction) {
 
 addForm.addEventListener('submit', async (e) => {
   e.preventDefault();
+  if (!isAuthed) return alert('請先登入');
   const input = document.getElementById('new-stat-name');
   const name = input.value.trim();
   if (!name) return;

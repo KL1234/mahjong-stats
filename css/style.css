@@ -1,4 +1,5 @@
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 
 body {
   font-family: "Microsoft JhengHei", "Segoe UI", sans-serif;
