@@ -17,15 +17,41 @@
 
     <section>
       <h2>統計項目管理</h2>
-      <p class="hint">在這裡新增、改名或刪除統計項目（例：和牌率、寶牌率）。所有雀士共用同一份項目清單。</p>
+      <p class="hint">
+        在這裡新增、改名或刪除統計項目（例：和牌率、寶牌率）。所有雀士共用同一份項目清單。<br>
+        <strong>數值型別：</strong>百分比 / 整數 / 小數。<br>
+        <strong>合併方式：</strong>加權平均（一般機率類）、加總（如「總對局數」）、取最大（如「最大連莊」）。
+      </p>
 
       <div id="stats-list-area">
         <p class="loading">載入中...</p>
       </div>
 
-      <form id="add-stat-form" class="inline-form auth-only" hidden>
-        <input type="text" id="new-stat-name" placeholder="新增統計項目（例：和牌率）" required maxlength="30">
-        <button type="submit" class="btn-primary">新增項目</button>
+      <form id="add-stat-form" class="stat-form auth-only" hidden>
+        <h3>新增項目</h3>
+        <div class="form-row">
+          <label>
+            名稱
+            <input type="text" id="new-stat-name" required maxlength="30" placeholder="例：和牌率">
+          </label>
+          <label>
+            數值型別
+            <select id="new-stat-type">
+              <option value="percent">百分比 (%)</option>
+              <option value="integer">整數</option>
+              <option value="decimal">小數</option>
+            </select>
+          </label>
+          <label>
+            合併方式
+            <select id="new-stat-agg">
+              <option value="weighted_avg">加權平均</option>
+              <option value="sum">加總</option>
+              <option value="max">取最大</option>
+            </select>
+          </label>
+          <button type="submit" class="btn-primary">新增</button>
+        </div>
       </form>
 
       <p id="auth-hint" class="hint" hidden>登入後可編輯統計項目。</p>

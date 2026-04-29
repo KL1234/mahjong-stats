@@ -262,10 +262,232 @@ section h3 {
   margin-top: 2rem;
 }
 
+/* ===== Tab Bar（player 頁面場別切換） ===== */
+.tab-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  border-bottom: 2px solid #d4e9d4;
+  margin-bottom: 1rem;
+}
+.tab-btn {
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+  font-size: 0.95rem;
+  color: #555;
+  margin-bottom: -2px;
+  border-radius: 6px 6px 0 0;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.tab-btn:hover { background: #eef5ee; color: #2c5530; }
+.tab-btn.active {
+  color: #2c5530;
+  font-weight: 600;
+  border-bottom-color: #2c5530;
+  background: #f3f9f3;
+}
+
+/* ===== 批次表單（仿雀魂三欄排版） ===== */
+.batch-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem 1rem;
+  background: #fff;
+  padding: 1.2rem;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  margin-bottom: 1rem;
+}
+.batch-grid .field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.batch-grid .field-name {
+  font-size: 0.88rem;
+  color: #2c5530;
+  font-weight: 600;
+}
+.batch-grid .field-name small {
+  color: #999;
+  font-weight: normal;
+  margin-left: 0.25rem;
+}
+.batch-grid input {
+  padding: 0.5rem 0.7rem;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 1rem;
+  font-family: inherit;
+  text-align: right;
+}
+.batch-grid input:focus {
+  outline: none;
+  border-color: #2c5530;
+  box-shadow: 0 0 0 2px rgba(44,85,48,0.15);
+}
+.batch-grid input:disabled {
+  background: #f5f5f5;
+  color: #888;
+}
+
+.form-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+/* ===== 合併視圖卡片 ===== */
+.merged-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.merged-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 1rem 1.2rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  border-top: 4px solid #2c5530;
+}
+.merged-card h4 {
+  margin: 0 0 0.6rem;
+  color: #2c5530;
+  font-size: 1.05rem;
+}
+.merged-card .stats-table {
+  box-shadow: none;
+  border-radius: 0;
+}
+.stats-table.compact th, .stats-table.compact td {
+  padding: 0.45rem 0.6rem;
+  font-size: 0.9rem;
+}
+.merged-card tbody tr {
+  cursor: help;
+}
+.merged-card tbody tr:hover {
+  background: #f9f7f0;
+}
+
+/* ===== 首頁卡片摘要 ===== */
+.card-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+}
+.summary-block {
+  background: #faf9f5;
+  padding: 0.5rem 0.7rem;
+  border-radius: 6px;
+  border-left: 3px solid #d4e9d4;
+}
+.summary-label {
+  display: block;
+  font-size: 0.75rem;
+  color: #888;
+  margin-bottom: 0.3rem;
+}
+.summary-block .stats { margin: 0; }
+.summary-block .stats li {
+  font-size: 0.82rem;
+  padding: 0.2rem 0;
+}
+
+/* ===== stats 管理頁 ===== */
+.stat-form {
+  background: #fff;
+  padding: 1rem 1.2rem;
+  border-radius: 8px;
+  margin-top: 1rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.stat-form h3 {
+  margin-top: 0;
+  border: none;
+  padding: 0;
+}
+.form-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: 0.7rem;
+  align-items: end;
+}
+.form-row label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+  gap: 0.25rem;
+  color: #555;
+}
+.form-row input, .form-row select {
+  padding: 0.5rem 0.7rem;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+.form-row input:focus, .form-row select:focus {
+  outline: none;
+  border-color: #2c5530;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  background: #eee;
+  color: #555;
+}
+.badge.type-percent { background: #d4e9d4; color: #2c5530; }
+.badge.type-integer { background: #fce6c4; color: #8a5a1a; }
+.badge.type-decimal { background: #d6e5f5; color: #2a4d7a; }
+.badge.agg-weighted_avg { background: #efe1f5; color: #5e3a78; }
+.badge.agg-sum { background: #fce6e3; color: #8a3a30; }
+.badge.agg-max { background: #fff4c4; color: #7a5a10; }
+
+.actions { white-space: nowrap; }
+.actions button { margin-right: 2px; }
+
+/* ===== Toast ===== */
+.toast {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2c5530;
+  color: #fff;
+  padding: 0.7rem 1.4rem;
+  border-radius: 999px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  z-index: 200;
+  font-size: 0.9rem;
+  animation: toast-in 0.2s ease-out;
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@media (max-width: 700px) {
+  .batch-grid { grid-template-columns: repeat(2, 1fr); }
+  .form-row { grid-template-columns: 1fr 1fr; }
+  .card-summary { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 600px) {
   .app-header { padding: 0.8rem 1rem; }
   .app-header h1 { font-size: 1.1rem; }
   main { padding: 0 1rem; }
   .player-grid { grid-template-columns: 1fr; }
   .stats-table th, .stats-table td { padding: 0.5rem 0.6rem; font-size: 0.85rem; }
+  .batch-grid { grid-template-columns: 1fr; padding: 1rem; }
+  .tab-btn { padding: 0.5rem 0.7rem; font-size: 0.85rem; }
 }

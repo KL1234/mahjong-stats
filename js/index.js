@@ -1,20 +1,34 @@
 import { supabase } from './supabase.js';
 import { initAuthArea, setupModalClose, escapeHtml } from './ui.js';
+import {
+  FOUR_MODES, THREE_MODES,
+  indexValues, gamesByMode, findTotalGamesStatId,
+  aggregateStat, formatValue,
+} from './aggregate.js';
 
 initAuthArea();
 
+let allStats = [];
+
 async function loadPlayers() {
   const list = document.getElementById('player-list');
-  const { data, error } = await supabase
-    .from('players')
-    .select('id, name, titles(name), player_stats(value, stats(name, display_order))')
-    .order('id');
+  const [playersRes, statsRes] = await Promise.all([
+    supabase
+      .from('players')
+      .select('id, name, titles(name), player_stats(stat_id, mode, value)')
+      .order('id'),
+    supabase
+      .from('stats')
+      .select('id, name, display_order, value_type, agg_method, unit')
+      .order('display_order'),
+  ]);
 
-  if (error) {
-    list.innerHTML = `<p class="error">載入失敗：${escapeHtml(error.message)}</p>`;
-    console.error(error);
+  if (playersRes.error) {
+    list.innerHTML = `<p class="error">載入失敗：${escapeHtml(playersRes.error.message)}</p>`;
     return;
   }
+  allStats = statsRes.data || [];
+  const data = playersRes.data;
 
   if (!data || data.length === 0) {
     list.innerHTML = '<p class="empty">尚無雀士資料，登入後可新增</p>';
@@ -29,26 +43,48 @@ function renderPlayerCard(player) {
     .map(t => `<span class="tag">${escapeHtml(t.name)}</span>`)
     .join('') || '<span class="empty-inline">（無稱號）</span>';
 
-  const sortedStats = (player.player_stats || [])
-    .map(ps => ({
-      name: ps.stats?.name,
-      order: ps.stats?.display_order ?? 99,
-      value: ps.value,
-    }))
-    .filter(s => s.name)
-    .sort((a, b) => a.order - b.order);
+  const valuesByStat = indexValues(player.player_stats);
+  const totalId = findTotalGamesStatId(allStats);
+  const allGames = gamesByMode(valuesByStat, totalId);
 
-  const stats = sortedStats.length
-    ? sortedStats.map(s => `<li><span>${escapeHtml(s.name)}</span><strong>${s.value}%</strong></li>`).join('')
-    : '<li class="empty-inline">（尚未填數值）</li>';
+  const fourSummary = summarize(valuesByStat, pick(allGames, FOUR_MODES), FOUR_MODES);
+  const threeSummary = summarize(valuesByStat, pick(allGames, THREE_MODES), THREE_MODES);
 
   return `
     <a class="player-card" href="player.html?id=${player.id}">
       <h3>${escapeHtml(player.name)}</h3>
       <div class="titles">${titles}</div>
-      <ul class="stats">${stats}</ul>
+      <div class="card-summary">
+        <div class="summary-block">
+          <span class="summary-label">四人合併</span>
+          ${fourSummary}
+        </div>
+        <div class="summary-block">
+          <span class="summary-label">三人合併</span>
+          ${threeSummary}
+        </div>
+      </div>
     </a>
   `;
+}
+
+function summarize(valuesByStat, games, modes) {
+  // 顯示三項：總對局數、和牌率、平均順位
+  const picks = ['總對局數', '和牌率', '平均順位'];
+  const items = picks.map(name => {
+    const stat = allStats.find(s => s.name === name);
+    if (!stat) return '';
+    const r = aggregateStat(stat, valuesByStat, games, modes);
+    const v = r.hasData ? formatValue(r.value, stat) : '—';
+    return `<li><span>${escapeHtml(name)}</span><strong>${v}</strong></li>`;
+  }).join('');
+  return `<ul class="stats">${items}</ul>`;
+}
+
+function pick(obj, modes) {
+  const r = {};
+  for (const m of modes) if (obj[m] != null) r[m] = obj[m];
+  return r;
 }
 
 document.getElementById('add-player-btn')?.addEventListener('click', () => {

@@ -3,6 +3,9 @@ import { initAuthArea, escapeHtml } from './ui.js';
 
 initAuthArea();
 
+const TYPE_LABEL = { percent: '百分比', integer: '整數', decimal: '小數' };
+const AGG_LABEL = { weighted_avg: '加權平均', sum: '加總', max: '取最大' };
+
 let isAuthed = false;
 let allStats = [];
 
@@ -13,7 +16,7 @@ const authHint = document.getElementById('auth-hint');
 supabase.auth.getUser().then(r => {
   isAuthed = !!r.data.user;
   syncAuthUi();
-  render();
+  load();
 });
 supabase.auth.onAuthStateChange((_e, session) => {
   isAuthed = !!session?.user;
@@ -28,7 +31,7 @@ function syncAuthUi() {
 async function load() {
   const { data, error } = await supabase
     .from('stats')
-    .select('id, name, display_order')
+    .select('id, name, display_order, value_type, agg_method, unit')
     .order('display_order');
 
   if (error) {
@@ -51,8 +54,10 @@ function render() {
     <tr>
       <td>${idx + 1}</td>
       <td>${escapeHtml(s.name)}</td>
-      ${isAuthed ? `<td>
-        <button class="btn-small rename-stat" data-id="${s.id}" data-name="${escapeHtml(s.name)}">改名</button>
+      <td><span class="badge type-${s.value_type}">${TYPE_LABEL[s.value_type] || s.value_type}</span></td>
+      <td><span class="badge agg-${s.agg_method}">${AGG_LABEL[s.agg_method] || s.agg_method}</span></td>
+      ${isAuthed ? `<td class="actions">
+        <button class="btn-small edit-stat" data-id="${s.id}">編輯</button>
         <button class="btn-small move-up" data-id="${s.id}" ${idx === 0 ? 'disabled' : ''}>↑</button>
         <button class="btn-small move-down" data-id="${s.id}" ${idx === allStats.length - 1 ? 'disabled' : ''}>↓</button>
         <button class="btn-small btn-danger-outline delete-stat" data-id="${s.id}" data-name="${escapeHtml(s.name)}">刪除</button>
@@ -66,6 +71,8 @@ function render() {
         <tr>
           <th style="width:60px;">順序</th>
           <th>項目名稱</th>
+          <th>數值型別</th>
+          <th>合併方式</th>
           ${isAuthed ? '<th>操作</th>' : ''}
         </tr>
       </thead>
@@ -77,16 +84,8 @@ function render() {
 }
 
 function attachHandlers() {
-  document.querySelectorAll('.rename-stat').forEach(btn => {
-    btn.onclick = async () => {
-      const id = parseInt(btn.dataset.id, 10);
-      const oldName = btn.dataset.name;
-      const newName = prompt('輸入新名稱：', oldName);
-      if (!newName || newName.trim() === '' || newName === oldName) return;
-      const { error } = await supabase.from('stats').update({ name: newName.trim() }).eq('id', id);
-      if (error) return alert(`改名失敗：${error.message}`);
-      await load();
-    };
+  document.querySelectorAll('.edit-stat').forEach(btn => {
+    btn.onclick = () => openEditDialog(parseInt(btn.dataset.id, 10));
   });
 
   document.querySelectorAll('.delete-stat').forEach(btn => {
@@ -108,6 +107,32 @@ function attachHandlers() {
   });
 }
 
+function openEditDialog(id) {
+  const stat = allStats.find(s => s.id === id);
+  if (!stat) return;
+
+  const newName = prompt(`編輯名稱：`, stat.name);
+  if (newName === null) return;
+  const trimmed = newName.trim();
+  if (!trimmed) return alert('名稱不可空白');
+
+  const newType = prompt('數值型別（percent / integer / decimal）：', stat.value_type);
+  if (newType === null) return;
+  if (!['percent', 'integer', 'decimal'].includes(newType)) return alert('型別錯誤');
+
+  const newAgg = prompt('合併方式（weighted_avg / sum / max）：', stat.agg_method);
+  if (newAgg === null) return;
+  if (!['weighted_avg', 'sum', 'max'].includes(newAgg)) return alert('合併方式錯誤');
+
+  supabase.from('stats')
+    .update({ name: trimmed, value_type: newType, agg_method: newAgg })
+    .eq('id', id)
+    .then(({ error }) => {
+      if (error) return alert(`更新失敗：${error.message}`);
+      load();
+    });
+}
+
 async function swap(id, direction) {
   const idx = allStats.findIndex(s => s.id === id);
   const target = idx + direction;
@@ -127,14 +152,15 @@ async function swap(id, direction) {
 addForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!isAuthed) return alert('請先登入');
-  const input = document.getElementById('new-stat-name');
-  const name = input.value.trim();
+  const name = document.getElementById('new-stat-name').value.trim();
+  const valueType = document.getElementById('new-stat-type').value;
+  const aggMethod = document.getElementById('new-stat-agg').value;
   if (!name) return;
-  const order = (allStats.length ? Math.max(...allStats.map(s => s.display_order ?? 0)) : 0) + 1;
-  const { error } = await supabase.from('stats').insert({ name, display_order: order });
+  const order = (allStats.length ? Math.max(...allStats.map(s => s.display_order ?? 0)) : 0) + 10;
+  const { error } = await supabase.from('stats').insert({
+    name, display_order: order, value_type: valueType, agg_method: aggMethod,
+  });
   if (error) return alert(`新增失敗：${error.message}`);
-  input.value = '';
+  addForm.reset();
   await load();
 });
-
-load();
