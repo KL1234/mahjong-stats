@@ -456,6 +456,90 @@ section h3 {
 .actions { white-space: nowrap; }
 .actions button { margin-right: 2px; }
 
+/* ===== 排行榜 ===== */
+.threshold-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  color: #555;
+}
+.threshold-picker select {
+  padding: 0.35rem 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  background: #fff;
+}
+
+.ranking-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.rank-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 1rem 1.2rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  border-top: 4px solid #2c5530;
+}
+.rank-card h3 {
+  margin: 0 0 0.2rem;
+  color: #2c5530;
+  font-size: 1.1rem;
+  border: none;
+  padding: 0;
+}
+.rank-stat-name {
+  margin: 0 0 0.7rem;
+  font-size: 0.78rem;
+  color: #888;
+}
+.rank-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.rank-row {
+  display: grid;
+  grid-template-columns: 2.2rem 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.3rem;
+  border-bottom: 1px dashed #eee;
+  font-size: 0.92rem;
+}
+.rank-row:last-child { border-bottom: none; }
+.rank-medal {
+  font-size: 1.05rem;
+  text-align: center;
+  color: #666;
+  font-weight: 600;
+}
+.rank-name {
+  color: #2a2a2a;
+  text-decoration: none;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rank-name:hover {
+  color: #2c5530;
+  text-decoration: underline;
+}
+.rank-value {
+  color: #2c5530;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.rank-row.rank-1 { background: linear-gradient(90deg, #fff7d6 0%, transparent 60%); border-radius: 4px; }
+.rank-row.rank-2 { background: linear-gradient(90deg, #f0f0f0 0%, transparent 60%); border-radius: 4px; }
+.rank-row.rank-3 { background: linear-gradient(90deg, #fae3cc 0%, transparent 60%); border-radius: 4px; }
+
 /* ===== Toast ===== */
 .toast {
   position: fixed;
