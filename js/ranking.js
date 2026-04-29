@@ -1,7 +1,7 @@
 import { supabase } from './supabase.js';
 import { initAuthArea, escapeHtml } from './ui.js';
 import {
-  FOUR_MODES,
+  FOUR_MODES, MODE_WEIGHT,
   indexValues, gamesByMode, findTotalGamesStatId,
   aggregateStat, formatValue,
 } from './aggregate.js';
@@ -20,7 +20,12 @@ const RANKINGS = [
   { title: '🎲 副露王',  statName: '副露率',   order: 'desc', useThreshold: true  },
   { title: '💩 被飛王',  statName: '被飛率',   order: 'desc', useThreshold: true  },
   { title: '⚡ 速攻王',  statName: '和了巡數', order: 'asc',  useThreshold: true  },
-  { title: '🎮 勤勞王',  statName: '總對局數', order: 'desc', useThreshold: false },
+  {
+    title: '🎮 勤勞王', statName: '總對局數', order: 'desc', useThreshold: false,
+    note: '計算公式：東場數 × 1 + 南場數 × 2（依遊戲時長加權）',
+    custom: c => (c.fourGamesByMode['4E'] || 0) * MODE_WEIGHT['4E']
+              + (c.fourGamesByMode['4S'] || 0) * MODE_WEIGHT['4S'],
+  },
 ];
 
 const TOP_N = 5;
@@ -96,6 +101,10 @@ function renderRankingCard(ranking, computed, eligible) {
   const pool = ranking.useThreshold ? eligible : computed;
 
   const rows = pool.map(c => {
+    if (ranking.custom) {
+      const v = ranking.custom(c);
+      return v > 0 ? { player: c.player, value: v } : null;
+    }
     const r = aggregateStat(stat, c.valuesByStat, c.fourGamesByMode, FOUR_MODES);
     return r.hasData ? { player: c.player, value: r.value } : null;
   }).filter(Boolean);
@@ -131,6 +140,7 @@ function renderRankingCard(ranking, computed, eligible) {
     <div class="rank-card">
       <h3>${escapeHtml(ranking.title)}</h3>
       <p class="rank-stat-name">依據：${escapeHtml(ranking.statName)} ${orderHint}</p>
+      ${ranking.note ? `<p class="rank-note">${escapeHtml(ranking.note)}</p>` : ''}
       <ol class="rank-list">${list}</ol>
     </div>
   `;

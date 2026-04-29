@@ -494,9 +494,17 @@ section h3 {
   padding: 0;
 }
 .rank-stat-name {
-  margin: 0 0 0.7rem;
+  margin: 0 0 0.4rem;
   font-size: 0.78rem;
   color: #888;
+}
+.rank-note {
+  margin: 0 0 0.7rem;
+  font-size: 0.75rem;
+  color: #a07a3a;
+  background: #fff7d6;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
 }
 .rank-list {
   list-style: none;
