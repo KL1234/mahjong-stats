@@ -1,10 +1,18 @@
 // 場別常數與合併計算
 export const MODES = ['4E', '4S', '3E', '3S'];
-export const MODE_LABELS = { '4E': '四人東', '4S': '四人南', '3E': '三人東', '3S': '三人南' };
+export const MERGED_MODES = ['4M', '3M'];
+export const ALL_MODES = [...MODES, ...MERGED_MODES];
+export const MODE_LABELS = {
+  '4E': '四人東', '4S': '四人南',
+  '3E': '三人東', '3S': '三人南',
+  '4M': '四人合併', '3M': '三人合併',
+};
 // 時間權重：南場 ≈ 東場 × 2
 export const MODE_WEIGHT = { '4E': 1, '4S': 2, '3E': 1, '3S': 2 };
 export const FOUR_MODES = ['4E', '4S'];
 export const THREE_MODES = ['3E', '3S'];
+// scope='merged_only' 的 stat 直接讀這個 mode 的值
+export const MERGED_MODE_FOR = { four: '4M', three: '3M' };
 
 const TOTAL_GAMES_NAME = '總對局數';
 
@@ -32,6 +40,21 @@ export function gamesByMode(valuesByStat, totalGamesStatId) {
 // 回傳 { value, breakdown, hasData }
 export function aggregateStat(stat, valuesByStat, gamesPerMode, modes) {
   const perMode = valuesByStat[stat.id] || {};
+
+  // scope='merged_only'：直接讀 4M 或 3M 那一筆，不做加權
+  if (stat.scope === 'merged_only') {
+    const mergedMode = modes === FOUR_MODES || modes[0] === '4E'
+      ? MERGED_MODE_FOR.four
+      : MERGED_MODE_FOR.three;
+    const v = perMode[mergedMode];
+    if (v == null) return { value: null, breakdown: '無資料（直填欄位）', hasData: false };
+    return {
+      value: v,
+      breakdown: `${MODE_LABELS[mergedMode]}（直填）= ${formatRaw(v, stat)}`,
+      hasData: true,
+    };
+  }
+
   const present = modes.filter(m => perMode[m] != null);
   if (present.length === 0) return { value: null, breakdown: '無資料', hasData: false };
 

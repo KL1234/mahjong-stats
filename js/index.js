@@ -5,17 +5,19 @@ import {
   indexValues, gamesByMode, findTotalGamesStatId,
   aggregateStat, formatValue,
 } from './aggregate.js';
+import { computeAutoTitles } from './ranking.js';
 
 initAuthArea();
 
 let allStats = [];
+let autoTitleMap = {};
 
 async function loadPlayers() {
   const list = document.getElementById('player-list');
   const [playersRes, statsRes] = await Promise.all([
     supabase
       .from('players')
-      .select('id, name, titles(name), player_stats(stat_id, mode, value)')
+      .select('id, name, is_active, titles(name), player_stats(stat_id, mode, value)')
       .order('id'),
     supabase
       .from('stats')
@@ -35,13 +37,21 @@ async function loadPlayers() {
     return;
   }
 
+  autoTitleMap = computeAutoTitles(data, allStats);
   list.innerHTML = data.map(renderPlayerCard).join('');
 }
 
 function renderPlayerCard(player) {
-  const titles = (player.titles || [])
+  const isActive = player.is_active !== false;
+  const manualTitles = (player.titles || [])
     .map(t => `<span class="tag">${escapeHtml(t.name)}</span>`)
-    .join('') || '<span class="empty-inline">（無稱號）</span>';
+    .join('');
+  const auto = autoTitleMap[player.id] || [];
+  const autoTitles = auto
+    .map(t => `<span class="tag tag-auto" title="${escapeHtml(t.note)}">${escapeHtml(t.title)}</span>`)
+    .join('');
+  const inactiveTag = isActive ? '' : '<span class="tag tag-inactive">💤 不參與排行</span>';
+  const titles = (manualTitles + autoTitles + inactiveTag) || '<span class="empty-inline">（無稱號）</span>';
 
   const valuesByStat = indexValues(player.player_stats);
   const totalId = findTotalGamesStatId(allStats);
@@ -51,7 +61,7 @@ function renderPlayerCard(player) {
   const threeSummary = summarize(valuesByStat, pick(allGames, THREE_MODES), THREE_MODES);
 
   return `
-    <a class="player-card" href="player.html?id=${player.id}">
+    <a class="player-card${isActive ? '' : ' inactive'}" href="player.html?id=${player.id}">
       <h3>${escapeHtml(player.name)}</h3>
       <div class="titles">${titles}</div>
       <div class="card-summary">

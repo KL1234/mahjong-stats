@@ -5,6 +5,18 @@ initAuthArea();
 
 const TYPE_LABEL = { percent: '百分比', integer: '整數', decimal: '小數' };
 const AGG_LABEL = { weighted_avg: '加權平均', sum: '加總', max: '取最大' };
+const CATEGORY_LABEL = {
+  basic: '基礎統計',
+  win_dist: '和牌分布',
+  style: '風格屬性',
+  yaku_normal: '番數達成次數',
+  yaku_dora: '寶牌',
+  yaku_yakuman: '役滿',
+};
+const SCOPE_LABEL = { per_mode: '分東/南', merged_only: '不分東南' };
+
+const VALID_CATEGORIES = Object.keys(CATEGORY_LABEL);
+const VALID_SCOPES = Object.keys(SCOPE_LABEL);
 
 let isAuthed = false;
 let allStats = [];
@@ -31,7 +43,7 @@ function syncAuthUi() {
 async function load() {
   const { data, error } = await supabase
     .from('stats')
-    .select('id, name, display_order, value_type, agg_method, unit')
+    .select('id, name, display_order, value_type, agg_method, unit, category, scope')
     .order('display_order');
 
   if (error) {
@@ -56,6 +68,8 @@ function render() {
       <td>${escapeHtml(s.name)}</td>
       <td><span class="badge type-${s.value_type}">${TYPE_LABEL[s.value_type] || s.value_type}</span></td>
       <td><span class="badge agg-${s.agg_method}">${AGG_LABEL[s.agg_method] || s.agg_method}</span></td>
+      <td><span class="badge">${escapeHtml(CATEGORY_LABEL[s.category] || s.category || '—')}</span></td>
+      <td><span class="badge">${escapeHtml(SCOPE_LABEL[s.scope] || s.scope || '—')}</span></td>
       ${isAuthed ? `<td class="actions">
         <button class="btn-small edit-stat" data-id="${s.id}">編輯</button>
         <button class="btn-small move-up" data-id="${s.id}" ${idx === 0 ? 'disabled' : ''}>↑</button>
@@ -73,6 +87,8 @@ function render() {
           <th>項目名稱</th>
           <th>數值型別</th>
           <th>合併方式</th>
+          <th>分類</th>
+          <th>場別劃分</th>
           ${isAuthed ? '<th>操作</th>' : ''}
         </tr>
       </thead>
@@ -124,8 +140,28 @@ function openEditDialog(id) {
   if (newAgg === null) return;
   if (!['weighted_avg', 'sum', 'max'].includes(newAgg)) return alert('合併方式錯誤');
 
+  const newCategory = prompt(
+    `分類（${VALID_CATEGORIES.join(' / ')}）：`,
+    stat.category || 'basic'
+  );
+  if (newCategory === null) return;
+  if (!VALID_CATEGORIES.includes(newCategory)) return alert('分類錯誤');
+
+  const newScope = prompt(
+    `場別劃分（${VALID_SCOPES.join(' / ')}）：`,
+    stat.scope || 'per_mode'
+  );
+  if (newScope === null) return;
+  if (!VALID_SCOPES.includes(newScope)) return alert('場別劃分錯誤');
+
   supabase.from('stats')
-    .update({ name: trimmed, value_type: newType, agg_method: newAgg })
+    .update({
+      name: trimmed,
+      value_type: newType,
+      agg_method: newAgg,
+      category: newCategory,
+      scope: newScope,
+    })
     .eq('id', id)
     .then(({ error }) => {
       if (error) return alert(`更新失敗：${error.message}`);
@@ -155,10 +191,14 @@ addForm.addEventListener('submit', async (e) => {
   const name = document.getElementById('new-stat-name').value.trim();
   const valueType = document.getElementById('new-stat-type').value;
   const aggMethod = document.getElementById('new-stat-agg').value;
+  const category = document.getElementById('new-stat-category').value;
+  const scope = document.getElementById('new-stat-scope').value;
   if (!name) return;
   const order = (allStats.length ? Math.max(...allStats.map(s => s.display_order ?? 0)) : 0) + 10;
   const { error } = await supabase.from('stats').insert({
-    name, display_order: order, value_type: valueType, agg_method: aggMethod,
+    name, display_order: order,
+    value_type: valueType, agg_method: aggMethod,
+    category, scope,
   });
   if (error) return alert(`新增失敗：${error.message}`);
   addForm.reset();

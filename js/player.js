@@ -1,12 +1,26 @@
 import { supabase } from './supabase.js';
 import { initAuthArea, escapeHtml } from './ui.js';
 import {
-  MODES, MODE_LABELS, FOUR_MODES, THREE_MODES,
+  MODES, MERGED_MODES, MODE_LABELS, FOUR_MODES, THREE_MODES,
   indexValues, gamesByMode, findTotalGamesStatId,
   aggregateStat, formatValue,
 } from './aggregate.js';
+import { computeAutoTitles } from './ranking.js';
 
 initAuthArea();
+
+const CATEGORY_LABELS = {
+  basic:        '基礎統計',
+  win_dist:     '和牌分布',
+  style:        '風格屬性',
+  yaku_normal:  '番數達成次數',
+  yaku_dora:    '寶牌',
+  yaku_yakuman: '役滿',
+};
+// 合併資料 tab 的分區順序（依雀魂遊戲內 UI 順序）
+const MERGED_CATEGORY_ORDER = ['win_dist', 'style', 'yaku_normal', 'yaku_dora', 'yaku_yakuman'];
+// 番數類欄位（預設值顯示 0）
+const YAKU_CATEGORIES = ['yaku_normal', 'yaku_dora', 'yaku_yakuman'];
 
 const params = new URLSearchParams(location.search);
 const playerId = parseInt(params.get('id'), 10);
@@ -15,6 +29,7 @@ const detailEl = document.getElementById('player-detail');
 let isAuthed = false;
 let player = null;
 let allStats = [];
+let allPlayers = [];
 let activeTab = 'merged';
 
 supabase.auth.getUser().then(r => {
@@ -32,16 +47,19 @@ async function load() {
     return;
   }
 
-  const [playerRes, statsRes] = await Promise.all([
+  const [playerRes, statsRes, allPlayersRes] = await Promise.all([
     supabase
       .from('players')
-      .select('id, name, titles(id, name), player_stats(stat_id, mode, value)')
+      .select('id, name, is_active, titles(id, name), player_stats(stat_id, mode, value)')
       .eq('id', playerId)
       .single(),
     supabase
       .from('stats')
-      .select('id, name, display_order, value_type, agg_method, unit')
+      .select('id, name, display_order, value_type, agg_method, unit, category, scope')
       .order('display_order'),
+    supabase
+      .from('players')
+      .select('id, name, is_active, player_stats(stat_id, mode, value)'),
   ]);
 
   if (playerRes.error) {
@@ -51,6 +69,7 @@ async function load() {
 
   player = playerRes.data;
   allStats = statsRes.data || [];
+  allPlayers = allPlayersRes.data || [];
   document.title = `${player.name} - 麻將統計`;
   render();
 }
@@ -65,26 +84,43 @@ function render() {
     </span>
   `).join('') || '<span class="empty-inline">（尚無稱號）</span>';
 
+  // 自動稱號（依排行榜 Top 1 計算）
+  const autoTitleMap = computeAutoTitles(allPlayers, allStats);
+  const myAutoTitles = autoTitleMap[player.id] || [];
+  const autoTitles = myAutoTitles.length === 0
+    ? '<span class="empty-inline">（目前沒有獲得任何排行榜第 1 名）</span>'
+    : myAutoTitles.map(t => `
+        <span class="tag tag-auto" title="${escapeHtml(t.note)}">${escapeHtml(t.title)}</span>
+      `).join('');
+
   const tabs = [
     { key: 'merged', label: '📊 合併數據' },
     ...MODES.map(m => ({ key: m, label: MODE_LABELS[m] })),
+    ...MERGED_MODES.map(m => ({ key: m, label: `✏️ ${MODE_LABELS[m]}` })),
   ];
   const tabBar = tabs.map(t => `
     <button class="tab-btn ${activeTab === t.key ? 'active' : ''}" data-tab="${t.key}">${t.label}</button>
   `).join('');
 
+  const isActive = player.is_active !== false;
   detailEl.innerHTML = `
     <div class="player-header">
-      <h2 id="player-name">${escapeHtml(player.name)}</h2>
-      ${isAuthed ? `<button id="rename-player-btn" class="btn-small">改名</button>` : ''}
+      <h2 id="player-name">${escapeHtml(player.name)}${isActive ? '' : ' <span class="inactive-badge">💤 不參與排行</span>'}</h2>
+      ${isAuthed ? `
+        <button id="rename-player-btn" class="btn-small">改名</button>
+        <button id="toggle-active-btn" class="btn-small">${isActive ? '💤 從排行排除' : '🔁 加回排行'}</button>
+      ` : ''}
     </div>
 
     <section>
       <h3>稱號</h3>
+      <h4 class="titles-subhead">🤖 自動稱號（依排行榜 Top 1 即時計算）</h4>
+      <div class="titles">${autoTitles}</div>
+      <h4 class="titles-subhead">✏️ 手動稱號</h4>
       <div class="titles">${titles}</div>
       ${isAuthed ? `
         <form id="add-title-form" class="inline-form">
-          <input type="text" id="new-title-name" placeholder="新增稱號（例：役滿王）" required maxlength="30">
+          <input type="text" id="new-title-name" placeholder="新增手動稱號（例：神之雀士）" required maxlength="30">
           <button type="submit" class="btn-primary">新增稱號</button>
         </form>
       ` : ''}
@@ -132,7 +168,8 @@ function renderMergedView() {
       ${renderMergedCard('三人合併（東+南）', THREE_MODES, valuesByStat, threeGames)}
     </div>
     <p class="hint">
-      合併規則：百分比/平均值依「該場別總對局數 × 場別權重」加權平均；總對局數取加總；最大連莊取最大值。<br>
+      合併規則：百分比/平均值依「該場別總對局數 × 場別權重」加權平均；總對局數取加總；最大連莊取最大值；<br>
+      和牌分布、風格屬性、番數類欄位為「直填」（不分東南），直接讀四人合併 / 三人合併。<br>
       場別權重：東風場 = 1，南風場 = 2（南場時長約為東場兩倍）。將滑鼠移到數值上可看到計算過程。
     </p>
   `;
@@ -145,48 +182,67 @@ function pickModes(obj, modes) {
 }
 
 function renderMergedCard(title, modes, valuesByStat, gamesPerMode) {
-  const rows = allStats.map(s => {
-    const r = aggregateStat(s, valuesByStat, gamesPerMode, modes);
-    const display = r.hasData ? formatValue(r.value, s) : '—';
+  // 依 scope 分為「基礎」（per_mode 自動計算）與其他類別（merged_only 直填）
+  const perModeStats = allStats.filter(s => s.scope !== 'merged_only');
+  const mergedStats = allStats.filter(s => s.scope === 'merged_only');
+
+  const basicRows = perModeStats.map(s => statRow(s, valuesByStat, gamesPerMode, modes)).join('');
+
+  const sections = MERGED_CATEGORY_ORDER.map(cat => {
+    const items = mergedStats.filter(s => s.category === cat);
+    if (items.length === 0) return '';
+    const rows = items.map(s => statRow(s, valuesByStat, gamesPerMode, modes)).join('');
     return `
-      <tr title="${escapeHtml(r.breakdown)}">
-        <td>${escapeHtml(s.name)}</td>
-        <td class="value-cell">${display}</td>
-      </tr>
+      <h5 class="merged-section-h">${escapeHtml(CATEGORY_LABELS[cat] || cat)}</h5>
+      <table class="stats-table compact"><tbody>${rows}</tbody></table>
     `;
   }).join('');
 
   return `
     <div class="merged-card">
       <h4>${escapeHtml(title)}</h4>
-      <table class="stats-table compact">
-        <tbody>${rows}</tbody>
-      </table>
+      <h5 class="merged-section-h">${escapeHtml(CATEGORY_LABELS.basic)}</h5>
+      <table class="stats-table compact"><tbody>${basicRows}</tbody></table>
+      ${sections}
     </div>
+  `;
+}
+
+function statRow(s, valuesByStat, gamesPerMode, modes) {
+  const r = aggregateStat(s, valuesByStat, gamesPerMode, modes);
+  const display = r.hasData ? formatValue(r.value, s) : '—';
+  return `
+    <tr title="${escapeHtml(r.breakdown)}">
+      <td>${escapeHtml(s.name)}</td>
+      <td class="value-cell">${display}</td>
+    </tr>
   `;
 }
 
 // ===== 單一場別視圖：批次表單 =====
 function renderModeView(mode) {
   const valuesByStat = indexValues(player.player_stats);
-  const fields = allStats.map(s => {
-    const v = valuesByStat[s.id]?.[mode];
-    const placeholder = placeholderFor(s);
-    return `
-      <label class="field" data-type="${s.value_type}">
-        <span class="field-name">${escapeHtml(s.name)}<small>${labelFor(s)}</small></span>
-        <input
-          type="text"
-          inputmode="decimal"
-          name="stat_${s.id}"
-          data-stat-id="${s.id}"
-          data-value-type="${s.value_type}"
-          value="${v ?? ''}"
-          placeholder="${placeholder}"
-          ${isAuthed ? '' : 'disabled'}>
-      </label>
-    `;
-  }).join('');
+  const isMerged = mode === '4M' || mode === '3M';
+  // per_mode tab 顯示 scope='per_mode' 的 stat；merged tab 顯示 scope='merged_only' 的 stat
+  const visibleStats = allStats.filter(s =>
+    isMerged ? s.scope === 'merged_only' : s.scope !== 'merged_only'
+  );
+
+  let body = '';
+  if (isMerged) {
+    // 依 category 分區塊
+    const sections = MERGED_CATEGORY_ORDER.map(cat => {
+      const items = visibleStats.filter(s => s.category === cat);
+      if (items.length === 0) return '';
+      return `
+        <h4 class="batch-section-h">${escapeHtml(CATEGORY_LABELS[cat] || cat)}</h4>
+        <div class="batch-grid">${items.map(s => fieldHtml(s, valuesByStat, mode)).join('')}</div>
+      `;
+    }).join('');
+    body = sections || '<p class="empty">尚無此分類的統計項</p>';
+  } else {
+    body = `<div class="batch-grid">${visibleStats.map(s => fieldHtml(s, valuesByStat, mode)).join('')}</div>`;
+  }
 
   const actions = isAuthed ? `
     <div class="form-actions">
@@ -198,9 +254,31 @@ function renderModeView(mode) {
 
   return `
     <form id="mode-form" data-mode="${mode}">
-      <div class="batch-grid">${fields}</div>
+      ${body}
       ${actions}
     </form>
+  `;
+}
+
+function fieldHtml(s, valuesByStat, mode) {
+  const v = valuesByStat[s.id]?.[mode];
+  const placeholder = placeholderFor(s);
+  // 番數類欄位若未填則預設顯示 0（方便 user 對照雀魂介面快速輸入）
+  const isYaku = YAKU_CATEGORIES.includes(s.category);
+  const displayValue = v != null ? v : (isYaku ? 0 : '');
+  return `
+    <label class="field" data-type="${s.value_type}">
+      <span class="field-name">${escapeHtml(s.name)}<small>${labelFor(s)}</small></span>
+      <input
+        type="text"
+        inputmode="decimal"
+        name="stat_${s.id}"
+        data-stat-id="${s.id}"
+        data-value-type="${s.value_type}"
+        value="${displayValue}"
+        placeholder="${placeholder}"
+        ${isAuthed ? '' : 'disabled'}>
+    </label>
   `;
 }
 
@@ -319,6 +397,16 @@ function attachCommonHandlers() {
       if (error) return alert(`移除失敗：${error.message}`);
       await load();
     };
+  });
+
+  document.getElementById('toggle-active-btn')?.addEventListener('click', async () => {
+    const next = player.is_active === false ? true : false;
+    const verb = next ? '加回排行榜' : '從排行榜排除';
+    if (!confirm(`確定${verb}此雀士？\n（影響所有自動稱號與排行榜計算）`)) return;
+    const { error } = await supabase.from('players').update({ is_active: next }).eq('id', player.id);
+    if (error) return alert(`更新失敗：${error.message}`);
+    await load();
+    flash(`已${verb}`);
   });
 
   document.getElementById('rename-player-btn')?.addEventListener('click', async () => {

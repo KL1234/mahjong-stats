@@ -99,6 +99,40 @@ main {
   align-items: center;
   gap: 0.3rem;
 }
+.tag.tag-auto {
+  background: #d4e9d4;
+  color: #2c5530;
+  border: 1px dashed #2c5530;
+  cursor: help;
+}
+.tag.tag-inactive {
+  background: #eee;
+  color: #888;
+  border: 1px dashed #aaa;
+}
+.player-card.inactive {
+  opacity: 0.55;
+  border-left-color: #aaa;
+  background: #fafafa;
+}
+.player-card.inactive:hover { opacity: 0.85; }
+.inactive-badge {
+  font-size: 0.7em;
+  color: #888;
+  background: #eee;
+  padding: 0.15em 0.5em;
+  border-radius: 999px;
+  vertical-align: middle;
+  font-weight: normal;
+}
+.titles-subhead {
+  margin: 0.6rem 0 0.3rem;
+  font-size: 0.85rem;
+  color: #555;
+  font-weight: 600;
+  border: none;
+  padding: 0;
+}
 .tag-remove {
   background: none;
   border: none;
@@ -290,6 +324,20 @@ section h3 {
   background: #f3f9f3;
 }
 
+/* ===== 合併視圖 / 批次表單 分區標題 ===== */
+.merged-section-h, .batch-section-h {
+  margin: 1rem 0 0.4rem;
+  font-size: 0.85rem;
+  color: #5a4a1a;
+  background: #f3ead0;
+  padding: 0.3rem 0.7rem;
+  border-radius: 4px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+.merged-section-h:first-of-type { margin-top: 0.4rem; }
+.batch-section-h:first-of-type { margin-top: 0; }
+
 /* ===== 批次表單（仿雀魂三欄排版） ===== */
 .batch-grid {
   display: grid;
@@ -415,7 +463,7 @@ section h3 {
 }
 .form-row {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr auto;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;
   gap: 0.7rem;
   align-items: end;
 }
@@ -571,6 +619,7 @@ section h3 {
 @media (max-width: 700px) {
   .batch-grid { grid-template-columns: repeat(2, 1fr); }
   .form-row { grid-template-columns: 1fr 1fr; }
+  .form-row button { grid-column: 1 / -1; }
   .card-summary { grid-template-columns: 1fr; }
 }
 
