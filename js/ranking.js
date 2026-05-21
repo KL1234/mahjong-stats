@@ -37,7 +37,7 @@ export const RANKINGS = [
 
   // === 既有：自訂 ===
   { title: '🎮 勤勞王', statName: '總對局數', order: 'desc', useThreshold: false,
-    note: '加權對局數最多（東場 ×1 + 南場 ×2，依時長加權）',
+    note: '推算累積總局數最多（東場 ×4.5 + 南場 ×8.5，依平均局數加權）',
     custom: c => (c.fourGamesByMode['4E'] || 0) * MODE_WEIGHT['4E']
               + (c.fourGamesByMode['4S'] || 0) * MODE_WEIGHT['4S'],
   },
@@ -59,12 +59,12 @@ export const RANKINGS = [
     custom: (c, ctx) => ratioOverWinCount(c, ['斷么九'], ctx.stats),
   },
   { title: '💀 一發的屎人', order: 'desc', useThreshold: true,
-    note: '一發 ÷ 立直總次數推算（立直率 × 對局數）：每立直一次能命中一發的比率',
+    note: '一發 ÷ 推算立直次數（立直率 × 推算總局數）：每立直一次能命中一發的比率',
     valueType: 'percent',
     custom: (c, ctx) => {
       const riichiRate = readWeightedPct(c, '立直率', ctx.stats);
       if (riichiRate == null) return null;
-      const totalRiichi = c.fourGamesTotal * riichiRate / 100;
+      const totalRiichi = c.fourHandsTotal * riichiRate / 100;
       if (totalRiichi === 0) return null;
       const ippatsu = readMergedCount(c, '一發', ctx.stats);
       if (ippatsu == null) return null;
@@ -119,6 +119,8 @@ export const AUTO_TITLE_THRESHOLD = 100;
 
 // === 共用：計算每位玩家的 computed 結構 ===
 // 自動排除 is_active === false 的玩家（user 標記為「不參與排行」）
+// - fourGamesTotal：四人東 + 四人南 的場數總和（用於門檻判斷）
+// - fourHandsTotal：四人東場×4.5 + 四人南場×8.5（推算的累積總局數，用於計算和牌/立直次數）
 export function computeAllPlayers(players, stats) {
   const totalGamesId = findTotalGamesStatId(stats);
   return players
@@ -127,7 +129,10 @@ export function computeAllPlayers(players, stats) {
       const valuesByStat = indexValues(p.player_stats);
       const fourGamesByMode = pickModes(gamesByMode(valuesByStat, totalGamesId), FOUR_MODES);
       const fourGamesTotal = Object.values(fourGamesByMode).reduce((a, v) => a + Number(v || 0), 0);
-      return { player: p, valuesByStat, fourGamesByMode, fourGamesTotal };
+      const fourHandsTotal =
+        Number(fourGamesByMode['4E'] || 0) * MODE_WEIGHT['4E']
+        + Number(fourGamesByMode['4S'] || 0) * MODE_WEIGHT['4S'];
+      return { player: p, valuesByStat, fourGamesByMode, fourGamesTotal, fourHandsTotal };
     });
 }
 
@@ -322,11 +327,12 @@ function readMergedCount(c, statName, stats) {
   return v == null ? null : Number(v);
 }
 
-// 推算四人合併和牌次數 = 和牌率(%) × 四人總對局數 / 100
+// 推算四人合併和牌次數 = 和牌率(%) × 推算總局數 / 100
+// 注意：和牌率是「每局」指標，所以分母必須是局數（fourHandsTotal），不是場數
 function estimateWinCount(c, stats) {
   const winRate = readWeightedPct(c, '和牌率', stats);
   if (winRate == null) return null;
-  return c.fourGamesTotal * winRate / 100;
+  return c.fourHandsTotal * winRate / 100;
 }
 
 // 「指定役名次數加總 / 和牌次數推算」百分比；用於斷么/混一色/七對子/全帶么九等高頻役

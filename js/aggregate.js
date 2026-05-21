@@ -7,14 +7,38 @@ export const MODE_LABELS = {
   '3E': '三人東', '3S': '三人南',
   '4M': '四人合併', '3M': '三人合併',
 };
-// 時間權重：南場 ≈ 東場 × 2
-export const MODE_WEIGHT = { '4E': 1, '4S': 2, '3E': 1, '3S': 2 };
+// 場別平均局數：考慮連莊/西入後的實際平均
+// 四人場：東風 ≈ 4.5 局、南風 ≈ 8.5 局（總局數 = 東風場 × 4.5 + 南風場 × 8.5）
+// 三人場：暫沿用舊 1:2 比例（待蒐集到平均局數資料後再調整）
+export const MODE_WEIGHT = { '4E': 4.5, '4S': 8.5, '3E': 1, '3S': 2 };
 export const FOUR_MODES = ['4E', '4S'];
 export const THREE_MODES = ['3E', '3S'];
 // scope='merged_only' 的 stat 直接讀這個 mode 的值
 export const MERGED_MODE_FOR = { four: '4M', three: '3M' };
 
 const TOTAL_GAMES_NAME = '總對局數';
+
+// 需做「場 → 每局」生存分析換算的統計項
+// 場被飛率為「整場至少被飛一次」的機率，必須用 1-(1-r)^(1/平均局數) 換成每局風險才能跨場別比較
+const SURVIVAL_CONVERT_STATS = new Set(['被飛率']);
+
+// 「每場」指標：每場只產生一個結果（如 平均順位），權重應只用場數，不乘以平均局數
+const MATCH_WEIGHTED_STATS = new Set(['平均順位']);
+
+export function isSurvivalConvertStat(stat) {
+  return SURVIVAL_CONVERT_STATS.has(stat?.name);
+}
+
+export function isMatchWeightedStat(stat) {
+  return MATCH_WEIGHTED_STATS.has(stat?.name);
+}
+
+// 場被飛率(%) → 每局被飛率(%)
+export function perHandFromPerMatch(perMatchPct, avgHands) {
+  if (perMatchPct == null || avgHands == null || avgHands <= 0) return null;
+  const r = Math.max(0, Math.min(1, perMatchPct / 100));
+  return (1 - Math.pow(1 - r, 1 / avgHands)) * 100;
+}
 
 export function findTotalGamesStatId(stats) {
   return stats.find(s => s.name === TOTAL_GAMES_NAME)?.id ?? null;
@@ -71,24 +95,56 @@ export function aggregateStat(stat, valuesByStat, gamesPerMode, modes) {
     return { value: perMode[best], breakdown: `max(${list}) = ${formatRaw(perMode[best], stat)}（取自 ${MODE_LABELS[best]}）`, hasData: true };
   }
 
-  // weighted_avg：權重 = 該場別總對局數 × 場別時長權重
+  // 被飛率：先把場被飛率換成每局被飛率，再依「該場別總局數」加權
+  if (isSurvivalConvertStat(stat)) {
+    let totalHands = 0, valueSum = 0;
+    const parts = [];
+    for (const m of present) {
+      const matches = Number(gamesPerMode[m] || 0);
+      const avgHands = MODE_WEIGHT[m];
+      if (matches === 0) continue;
+      const hands = matches * avgHands;
+      const perHandPct = perHandFromPerMatch(perMode[m], avgHands);
+      if (perHandPct == null) continue;
+      valueSum += perHandPct * hands;
+      totalHands += hands;
+      parts.push(`${MODE_LABELS[m]}[1-(1-${formatRaw(perMode[m], stat)})^(1/${avgHands})=${formatRaw(perHandPct, stat)} × ${matches}場 × ${avgHands}局]`);
+    }
+    if (totalHands === 0) {
+      return { value: null, breakdown: '需先填「總對局數」才能加權', hasData: false };
+    }
+    const avg = valueSum / totalHands;
+    return {
+      value: avg,
+      breakdown: `每局被飛率：[${parts.join(' + ')}] ÷ ${totalHands}局 = ${formatRaw(avg, stat)}`,
+      hasData: true,
+    };
+  }
+
+  // weighted_avg：
+  // - 一般 stat（每局指標）：權重 = 場數 × 平均局數 ≈ 該場別總局數
+  // - 每場指標（如平均順位）：權重 = 場數
+  const useMatchWeight = isMatchWeightedStat(stat);
   let weightSum = 0, valueSum = 0;
   const parts = [];
   for (const m of present) {
-    const games = Number(gamesPerMode[m] || 0);
-    const w = games * MODE_WEIGHT[m];
+    const matches = Number(gamesPerMode[m] || 0);
+    const w = useMatchWeight ? matches : matches * MODE_WEIGHT[m];
     if (w === 0) continue;
     valueSum += perMode[m] * w;
     weightSum += w;
-    parts.push(`${MODE_LABELS[m]}(${formatRaw(perMode[m], stat)} × ${games}局 × ${MODE_WEIGHT[m]})`);
+    parts.push(useMatchWeight
+      ? `${MODE_LABELS[m]}(${formatRaw(perMode[m], stat)} × ${matches}場)`
+      : `${MODE_LABELS[m]}(${formatRaw(perMode[m], stat)} × ${matches}場 × ${MODE_WEIGHT[m]}局)`);
   }
   if (weightSum === 0) {
     return { value: null, breakdown: '需先填「總對局數」才能加權', hasData: false };
   }
   const avg = valueSum / weightSum;
+  const unit = useMatchWeight ? '場' : '局';
   return {
     value: avg,
-    breakdown: `[${parts.join(' + ')}] ÷ ${weightSum} = ${formatRaw(avg, stat)}`,
+    breakdown: `[${parts.join(' + ')}] ÷ ${weightSum}${unit} = ${formatRaw(avg, stat)}`,
     hasData: true,
   };
 }

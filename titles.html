@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>稱號計算方式 - 麻將統計</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="app-header">
+    <h1><a href="index.html">🀄 麻將統計</a></h1>
+    <div id="auth-area"></div>
+  </header>
+
+  <main>
+    <a href="index.html" class="back-link">← 返回列表</a>
+
+    <section class="toolbar">
+      <h2>📐 稱號計算方式</h2>
+      <div class="toolbar-actions">
+        <a href="ranking.html" class="btn-secondary">🏆 排行榜</a>
+      </div>
+    </section>
+
+    <section class="formula-section">
+      <h3>共通公式</h3>
+      <table class="formula-table">
+        <tbody>
+          <tr>
+            <th>場別平均局數</th>
+            <td>
+              四人東風 ≈ <strong>4.5 局</strong>、四人南風 ≈ <strong>8.5 局</strong>（已考慮連莊／西入後實際平均）<br>
+              <span class="formula-hint">三人場暫沿用舊權重比 1:2，待蒐集到平均局數資料後再調整。</span>
+            </td>
+          </tr>
+          <tr>
+            <th>四人總局數</th>
+            <td>
+              <code>總局數 = 東風場數 × 4.5 + 南風場數 × 8.5</code><br>
+              <span class="formula-hint">「勤勞王」就是這個值，代表玩家累積打過的局數。</span>
+            </td>
+          </tr>
+          <tr>
+            <th>事件率合併（和牌率／立直率／放銃率 等）</th>
+            <td>
+              加權平均，權重 = 該場別場數 × 該場別平均局數：<br>
+              <code>事件率 = Σ(該場別事件率 × 場數 × 平均局數) ÷ Σ(場數 × 平均局數)</code><br>
+              <span class="formula-hint">等同於「以實際局數加權」。</span>
+            </td>
+          </tr>
+          <tr>
+            <th>被飛率（特別處理）</th>
+            <td>
+              場被飛率是「整場至少被飛一次」的場機率，<strong>不能直接比較東/南</strong>（南風場局數多，被飛率自然偏高）。<br>
+              先用生存分析換算成「每局被飛率」再加權：<br>
+              <code>每局被飛率 = 1 − (1 − 場被飛率)^(1 / 平均局數)</code><br>
+              <span class="formula-hint">範例：東風 2% → 1−(1−0.02)^(1/4.5) ≈ 0.45%；南風 9% → 1−(1−0.09)^(1/8.5) ≈ 1.10%</span>
+            </td>
+          </tr>
+          <tr>
+            <th>平均順位（特別處理）</th>
+            <td>
+              每場只產生一個順位，<strong>權重只用場數</strong>，不乘以平均局數：<br>
+              <code>平均順位 = Σ(該場別平均順位 × 場數) ÷ Σ(場數)</code><br>
+              <span class="formula-hint">與其他「每局」指標的權重不同，避免南場順位被高估。</span>
+            </td>
+          </tr>
+          <tr>
+            <th>合併方式（最大連莊）</th>
+            <td>取四人東、四人南兩場別的最大值。</td>
+          </tr>
+          <tr>
+            <th>合併方式（總對局數）</th>
+            <td>取四人東 + 四人南場數加總。</td>
+          </tr>
+          <tr>
+            <th>合併資料（merged_only）</th>
+            <td>
+              一位率、立直和牌率、寶牌次數等「直填欄位」會直接讀玩家輸入的「四人合併」資料，不再做東/南加權。<br>
+              <span class="formula-hint">這類欄位本身就是雀魂在合併資料 tab 給出的整體數值。</span>
+            </td>
+          </tr>
+          <tr>
+            <th>排行門檻</th>
+            <td>
+              標示「useThreshold」的稱號，玩家須四人總場數 ≥ 門檻才會列入比較<br>
+              （排行榜頁可選 10/50/100/200/500 局；自動稱號頁固定 <strong>100 局</strong> 門檻）。<br>
+              <span class="formula-hint">役滿收藏家、勤勞王因屬於絕對次數，不設門檻。</span>
+            </td>
+          </tr>
+          <tr>
+            <th>自動稱號</th>
+            <td>玩家若在某排行榜為第 1 名，會在個人頁自動掛上對應稱號。</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="formula-section">
+      <h3>各稱號計算方式</h3>
+      <p class="hint">下表列出每個稱號的依據統計項、計算公式、排序方向與門檻。</p>
+      <div id="title-cards-area" class="title-cards-grid">
+        <p class="loading">載入中...</p>
+      </div>
+    </section>
+  </main>
+
+  <div id="login-modal" class="modal" hidden>
+    <div class="modal-content">
+      <h3>登入</h3>
+      <form id="login-form">
+        <label>
+          帳號
+          <input type="text" id="login-id" required autocomplete="username">
+        </label>
+        <label>
+          密碼
+          <input type="password" id="login-password" required autocomplete="current-password">
+        </label>
+        <p id="login-error" class="error"></p>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" data-close-modal>取消</button>
+          <button type="submit" class="btn-primary">登入</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script type="module" src="js/titles.js"></script>
+</body>
+</html>

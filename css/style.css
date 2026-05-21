@@ -596,6 +596,92 @@ section h3 {
 .rank-row.rank-2 { background: linear-gradient(90deg, #f0f0f0 0%, transparent 60%); border-radius: 4px; }
 .rank-row.rank-3 { background: linear-gradient(90deg, #fae3cc 0%, transparent 60%); border-radius: 4px; }
 
+/* ===== Title formulas page ===== */
+.formula-section {
+  margin-top: 1.5rem;
+}
+.formula-section > h3 {
+  margin: 0 0 0.6rem;
+  color: #2c5530;
+  border-bottom: 2px solid #2c5530;
+  padding-bottom: 0.3rem;
+}
+.formula-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.formula-table th,
+.formula-table td {
+  padding: 0.7rem 1rem;
+  text-align: left;
+  vertical-align: top;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  border-bottom: 1px solid #eee;
+}
+.formula-table th {
+  width: 30%;
+  background: #f5f3ed;
+  color: #2c5530;
+  font-weight: 600;
+}
+.formula-table tr:last-child th,
+.formula-table tr:last-child td {
+  border-bottom: none;
+}
+.formula-table code {
+  background: #f3efe2;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.88rem;
+  color: #5b4a1a;
+}
+.formula-hint {
+  display: block;
+  font-size: 0.82rem;
+  color: #888;
+  margin-top: 0.25rem;
+}
+.formula-table.compact th,
+.formula-table.compact td {
+  padding: 0.45rem 0.7rem;
+  font-size: 0.85rem;
+}
+.formula-table.compact th { width: 26%; }
+.title-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 1rem;
+  margin-top: 0.6rem;
+}
+.title-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  border-top: 4px solid #a07a3a;
+}
+.title-card h4 {
+  margin: 0 0 0.25rem;
+  color: #2c5530;
+  font-size: 1.05rem;
+}
+.title-note {
+  margin: 0 0 0.5rem;
+  font-size: 0.82rem;
+  color: #a07a3a;
+  background: #fff7d6;
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+}
+.order-asc { color: #2c5530; font-weight: 600; }
+.order-desc { color: #b04a3a; font-weight: 600; }
+.warn { color: #b04a3a; font-size: 0.82rem; }
+
 /* ===== Toast ===== */
 .toast {
   position: fixed;
@@ -631,4 +717,7 @@ section h3 {
   .stats-table th, .stats-table td { padding: 0.5rem 0.6rem; font-size: 0.85rem; }
   .batch-grid { grid-template-columns: 1fr; padding: 1rem; }
   .tab-btn { padding: 0.5rem 0.7rem; font-size: 0.85rem; }
+  .formula-table th { width: 38%; font-size: 0.85rem; }
+  .formula-table td { font-size: 0.85rem; }
+  .title-cards-grid { grid-template-columns: 1fr; }
 }
